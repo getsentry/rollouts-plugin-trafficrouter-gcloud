@@ -1,0 +1,4 @@
+dist/
+*.out
+.DS_Store
+.lore.md

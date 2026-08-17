@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: example-gcloud-rollout
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: example-gcloud
+  template:
+    metadata:
+      labels:
+        app: example-gcloud
+    spec:
+      containers:
+        - name: example
+          image: nginx:1.25
+          ports:
+            - containerPort: 80
+  strategy:
+    canary:
+      canaryService: example-gcloud-canary
+      stableService: example-gcloud-stable
+      trafficRouting:
+        plugins:
+          sentry-io/gcloud:
+            project: my-gcp-project
+            # region: us-central1        # omit for a global backend service
+            backendServiceName: my-backend-service
+            canaryNegPattern: my-canary-neg
+            stableNegPattern: my-stable-neg
+            updateStableCapacityScaler: true
+      steps:
+        - setWeight: 20
+        - pause: {}
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 100
