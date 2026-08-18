@@ -85,12 +85,24 @@ func (r *RpcPlugin) updateBackendService(cfg *GCloudTrafficRouting, svc *compute
 	for _, backend := range svc.Backends {
 		if strings.HasSuffix(backend.Group, cfg.CanaryNegPattern) {
 			backend.CapacityScaler = canaryScaler
+			// CapacityScaler has ,omitempty; force-send so a 0 value is not dropped.
+			backend.ForceSendFields = appendUnique(backend.ForceSendFields, "CapacityScaler")
 		}
 		if strings.HasSuffix(backend.Group, cfg.StableNegPattern) {
 			backend.CapacityScaler = stableScaler
+			backend.ForceSendFields = appendUnique(backend.ForceSendFields, "CapacityScaler")
 		}
 	}
 
+}
+
+func appendUnique(fields []string, name string) []string {
+	for _, f := range fields {
+		if f == name {
+			return fields
+		}
+	}
+	return append(fields, name)
 }
 
 // Type returns the type of the plugin.

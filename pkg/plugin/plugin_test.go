@@ -194,8 +194,14 @@ func TestSetWeightZeroAndFull(t *testing.T) {
 		rpcErr := r.SetWeight(newRollout(cfg), tc.weight, nil)
 		require.Empty(t, rpcErr.ErrorString)
 
-		assert.InDelta(t, tc.wantCanary, findBackend(fake.updated, "canary-neg").CapacityScaler, 1e-9, "weight=%d", tc.weight)
-		assert.InDelta(t, tc.wantStable, findBackend(fake.updated, "stable-neg").CapacityScaler, 1e-9, "weight=%d", tc.weight)
+		canary := findBackend(fake.updated, "canary-neg")
+		stable := findBackend(fake.updated, "stable-neg")
+		assert.InDelta(t, tc.wantCanary, canary.CapacityScaler, 1e-9, "weight=%d", tc.weight)
+		assert.InDelta(t, tc.wantStable, stable.CapacityScaler, 1e-9, "weight=%d", tc.weight)
+
+		// A 0 scaler must be force-sent, otherwise omitempty drops it and GCP keeps the old value.
+		assert.Contains(t, canary.ForceSendFields, "CapacityScaler", "weight=%d", tc.weight)
+		assert.Contains(t, stable.ForceSendFields, "CapacityScaler", "weight=%d", tc.weight)
 	}
 }
 
