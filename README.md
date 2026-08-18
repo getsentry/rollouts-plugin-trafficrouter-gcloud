@@ -23,12 +23,17 @@ On each `SetWeight` call the plugin translates that weight into a
 
 ```
 canary.capacityScaler = desiredWeight / 100
-stable.capacityScaler = (100 - desiredWeight) / 100
+stable.capacityScaler = 1 - (desiredWeight / 100)   # only when updateStableCapacityScaler is true
 ```
 
-The canary and stable backends are matched by comparing the trailing segment of
-each backend's `group` URL against the configured `canaryBackendName` and
-`stableBackendName`.
+By default (`updateStableCapacityScaler: false`) only the canary backends are
+updated and the stable backends are left untouched. Set
+`updateStableCapacityScaler: true` to also scale down the stable backends
+proportionally.
+
+The canary and stable backends are matched by checking whether each backend's
+`group` URL has the configured `canaryNegPattern` / `stableNegPattern` as a
+suffix.
 
 A single logical backend often maps to **multiple** backend entries within one
 backend service — one per region/zone (each pointing at a different
@@ -50,10 +55,10 @@ metadata:
   namespace: argo-rollouts
 data:
   trafficRouterPlugins: |-
-    - name: "argoproj-labs/gcloud"
+    - name: "sentry.io/gcloud"
       location: "file:///tmp/argo-rollouts/traffic-plugin"
       # or a remote artifact:
-      # location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gcloud/releases/download/v0.0.1/rollouts-plugin-trafficrouter-gcloud-linux-amd64"
+      # location: "https://github.com/getsentry/rollouts-plugin-trafficrouter-gcloud/releases/download/v0.0.1/rollouts-plugin-trafficrouter-gcloud-linux-amd64"
 ```
 
 The plugin authenticates to GCP using
@@ -76,12 +81,13 @@ spec:
       stableService: example-stable
       trafficRouting:
         plugins:
-          argoproj-labs/gcloud:
+          sentry.io/gcloud:
             project: my-gcp-project
             region: us-central1            # omit for a global backend service
             backendServiceName: my-backend-service
-            canaryBackendName: my-canary-neg
-            stableBackendName: my-stable-neg
+            canaryNegPattern: my-canary-neg
+            stableNegPattern: my-stable-neg
+            updateStableCapacityScaler: true
       steps:
         - setWeight: 20
         - pause: {}
@@ -92,13 +98,14 @@ spec:
 
 ### Configuration reference
 
-| Field                | Required | Description                                                                                       |
-| -------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `project`            | yes      | GCP project ID that owns the backend service.                                                     |
-| `region`             | no       | Region of a regional backend service. Omit for a global backend service.                          |
-| `backendServiceName` | yes      | Name of the GCP backend service holding the canary and stable backends.                           |
-| `canaryBackendName`  | yes      | Trailing name of the backend (instance group / NEG) that receives canary traffic.                 |
-| `stableBackendName`  | yes      | Trailing name of the backend (instance group / NEG) that receives stable traffic.                 |
+| Field                        | Required | Description                                                                                                          |
+| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `project`                    | yes      | GCP project ID that owns the backend service.                                                                       |
+| `region`                     | no       | Region of a regional backend service. Omit for a global backend service.                                           |
+| `backendServiceName`         | yes      | Name of the GCP backend service holding the canary and stable backends.                                            |
+| `canaryNegPattern`           | yes      | Suffix matched against each backend's `group` URL to select the canary backend(s).                                 |
+| `stableNegPattern`           | yes      | Suffix matched against each backend's `group` URL to select the stable backend(s).                                 |
+| `updateStableCapacityScaler` | no       | If `true`, also set the stable backends' capacityScaler to `1 - canaryScaler`. If `false` (default), leave stable untouched. |
 
 ## Building
 
@@ -106,7 +113,35 @@ spec:
 make build              # builds dist/rollouts-plugin-trafficrouter-gcloud
 make build-linux-amd64  # cross-compile for the controller image
 make test               # run unit tests
+make release-binaries   # cross-compile all release binaries + checksums into dist/
 ```
+
+## Releasing
+
+Releases are produced automatically by the [`Release`](.github/workflows/release.yaml)
+GitHub Actions workflow whenever a `v*` tag is pushed. The workflow runs the
+tests, cross-compiles binaries for `linux/amd64`, `linux/arm64`, `darwin/amd64`
+and `darwin/arm64`, generates a `checksums.txt`, and creates a GitHub Release
+with those artifacts attached and auto-generated release notes.
+
+To cut a new release:
+
+1. Make sure `main` is green in [CI](.github/workflows/ci.yaml) and up to date.
+2. Choose the next [semver](https://semver.org/) version, e.g. `v0.1.0`.
+3. Tag the commit and push the tag:
+
+   ```sh
+   git checkout main && git pull
+   git tag -a v0.1.0 -m "v0.1.0"
+   git push origin v0.1.0
+   ```
+
+4. Watch the `Release` workflow run. When it finishes, the release and its
+   binaries will be available at
+   `https://github.com/getsentry/rollouts-plugin-trafficrouter-gcloud/releases`.
+
+The version reported by `./rollouts-plugin-trafficrouter-gcloud -version` is
+derived from the tag (injected at build time via `-ldflags`).
 
 ## Development notes
 

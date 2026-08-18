@@ -23,12 +23,13 @@ spec:
       stableService: example-gcloud-stable
       trafficRouting:
         plugins:
-          argoproj-labs/gcloud:
+          sentry.io/gcloud:
             project: my-gcp-project
             # region: us-central1        # omit for a global backend service
             backendServiceName: my-backend-service
-            canaryBackendName: my-canary-neg
-            stableBackendName: my-stable-neg
+            canaryNegPattern: my-canary-neg
+            stableNegPattern: my-stable-neg
+            updateStableCapacityScaler: true
       steps:
         - setWeight: 20
         - pause: {}

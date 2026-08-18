@@ -5,5 +5,5 @@ metadata:
   namespace: argo-rollouts
 data:
   trafficRouterPlugins: |-
-    - name: "argoproj-labs/gcloud"
+    - name: "sentry.io/gcloud"
       location: "file:///tmp/argo-rollouts/traffic-plugin"
