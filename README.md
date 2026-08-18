@@ -55,7 +55,7 @@ metadata:
   namespace: argo-rollouts
 data:
   trafficRouterPlugins: |-
-    - name: "sentry.io/gcloud"
+    - name: "sentry-io/gcloud"
       location: "file:///tmp/argo-rollouts/traffic-plugin"
       # or a remote artifact:
       # location: "https://github.com/getsentry/rollouts-plugin-trafficrouter-gcloud/releases/download/v0.0.1/rollouts-plugin-trafficrouter-gcloud-linux-amd64"
@@ -81,7 +81,7 @@ spec:
       stableService: example-stable
       trafficRouting:
         plugins:
-          sentry.io/gcloud:
+          sentry-io/gcloud:
             project: my-gcp-project
             region: us-central1            # omit for a global backend service
             backendServiceName: my-backend-service

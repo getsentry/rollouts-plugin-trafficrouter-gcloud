@@ -23,7 +23,7 @@ spec:
       stableService: example-gcloud-stable
       trafficRouting:
         plugins:
-          sentry.io/gcloud:
+          sentry-io/gcloud:
             project: my-gcp-project
             # region: us-central1        # omit for a global backend service
             backendServiceName: my-backend-service

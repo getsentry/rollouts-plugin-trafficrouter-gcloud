@@ -8,7 +8,7 @@ const Type = "GoogleCloud"
 // ConfigKey is used to identify this plugin's configuration in the argo-rollouts
 // configmap and in the Rollout resource under
 // spec.strategy.canary.trafficRouting.plugins.
-const ConfigKey = "sentry.io/gcloud"
+const ConfigKey = "sentry-io/gcloud"
 
 // GCloudTrafficRouting represents the parameters required to configure the
 // Google Cloud traffic routing plugin. It is provided by the user under the
@@ -21,7 +21,7 @@ const ConfigKey = "sentry.io/gcloud"
 //	    canary:
 //	      trafficRouting:
 //	        plugins:
-//	          sentry.io/gcloud:
+//	          sentry-io/gcloud:
 //	            project: my-gcp-project
 //	            region: us-central1
 //	            backendServiceName: my-backend-service
