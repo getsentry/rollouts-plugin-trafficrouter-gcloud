@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
 )
 
@@ -13,6 +14,7 @@ const operationPollInterval = 2 * time.Second
 
 type gcloudBackendServiceClient struct {
 	compute *compute.Service
+	log     *logrus.Entry
 }
 
 var _ backendServiceClient = (*gcloudBackendServiceClient)(nil)
@@ -84,12 +86,12 @@ func (c *gcloudBackendServiceClient) Update(ctx context.Context, cfg *GCloudTraf
 	if err != nil {
 		return err
 	}
-	return waitOperation(ctx, scope, op)
+	return c.waitOperation(ctx, scope, op)
 }
 
 // waitOperation blocks until op reaches DONE, then surfaces any
 // operation-level error.
-func waitOperation(ctx context.Context, scope backendServiceScope, op *compute.Operation) error {
+func (c *gcloudBackendServiceClient) waitOperation(ctx context.Context, scope backendServiceScope, op *compute.Operation) error {
 	for op != nil && op.Status != "DONE" {
 		// Operations.Wait long-polls but may return before the operation is
 		// DONE, in which case we poll again after a short delay.
@@ -98,13 +100,23 @@ func waitOperation(ctx context.Context, scope backendServiceScope, op *compute.O
 			return err
 		}
 		if waited.Status != "DONE" {
+			c.log.WithFields(logrus.Fields{
+				"operation": waited.Name,
+				"status":    waited.Status,
+			}).Infof("operation not done yet, waiting %s before polling again", operationPollInterval)
 			if err := sleepCtx(ctx, operationPollInterval); err != nil {
 				return err
 			}
 		}
 		op = waited
 	}
-	return operationError(op)
+	if err := operationError(op); err != nil {
+		return err
+	}
+	if op != nil {
+		c.log.WithField("operation", op.Name).Info("backend service update operation completed")
+	}
+	return nil
 }
 
 // operationError converts a failed compute operation into a Go error.

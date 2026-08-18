@@ -38,7 +38,7 @@ func (r *RpcPlugin) InitPlugin() pluginTypes.RpcError {
 	if err != nil {
 		return pluginTypes.RpcError{ErrorString: fmt.Sprintf("failed to create google cloud compute client: %v", err)}
 	}
-	r.client = &gcloudBackendServiceClient{compute: computeService}
+	r.client = &gcloudBackendServiceClient{compute: computeService, log: r.LogCtx}
 	return pluginTypes.RpcError{}
 }
 
