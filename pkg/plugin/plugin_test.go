@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -196,6 +197,44 @@ func TestSetWeightZeroAndFull(t *testing.T) {
 		assert.InDelta(t, tc.wantCanary, findBackend(fake.updated, "canary-neg").CapacityScaler, 1e-9, "weight=%d", tc.weight)
 		assert.InDelta(t, tc.wantStable, findBackend(fake.updated, "stable-neg").CapacityScaler, 1e-9, "weight=%d", tc.weight)
 	}
+}
+
+func TestSetWeightUpdateErrorSurfaces(t *testing.T) {
+	cfg := testConfig()
+	fake := &fakeBackendServiceClient{
+		svc: &compute.BackendService{
+			Name: cfg.BackendServiceName,
+			Backends: []*compute.Backend{
+				{Group: "x/canary-neg"},
+				{Group: "x/stable-neg"},
+			},
+		},
+		updateErr: fmt.Errorf("boom"),
+	}
+	r := newRpcPlugin(fake)
+
+	rpcErr := r.SetWeight(newRollout(cfg), 30, nil)
+	require.NotEmpty(t, rpcErr.ErrorString)
+	assert.Contains(t, rpcErr.ErrorString, "boom")
+}
+
+func TestOperationError(t *testing.T) {
+	assert.NoError(t, operationError(nil))
+	assert.NoError(t, operationError(&compute.Operation{Name: "op"}))
+	assert.NoError(t, operationError(&compute.Operation{Name: "op", Error: &compute.OperationError{}}))
+
+	err := operationError(&compute.Operation{
+		Name: "op-1",
+		Error: &compute.OperationError{
+			Errors: []*compute.OperationErrorErrors{
+				{Code: "RESOURCE_NOT_READY", Message: "not ready"},
+			},
+		},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "op-1")
+	assert.Contains(t, err.Error(), "RESOURCE_NOT_READY")
+	assert.Contains(t, err.Error(), "not ready")
 }
 
 func TestSetWeightOutOfRange(t *testing.T) {

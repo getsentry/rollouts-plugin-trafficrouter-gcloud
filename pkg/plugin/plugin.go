@@ -71,6 +71,7 @@ func (r *RpcPlugin) SetWeight(rollout *v1alpha1.Rollout, desiredWeight int32, _ 
 		"backendService": cfg.BackendServiceName,
 		"desiredWeight":  desiredWeight,
 		"canaryScaler":   canaryScaler,
+		"stableScaler":   stableScaler,
 	}).Info("Updating backend service capacity scalers")
 
 	if err := r.client.Update(ctx, cfg, svc); err != nil {
