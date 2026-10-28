@@ -2,6 +2,8 @@ module github.com/argoproj-labs/rollouts-plugin-trafficrouter-gcloud
 
 go 1.25.0
 
+toolchain go1.26.10
+
 require (
 	github.com/argoproj/argo-rollouts v1.7.1
 	github.com/hashicorp/go-plugin v1.6.1
